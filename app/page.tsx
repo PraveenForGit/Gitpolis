@@ -1,65 +1,132 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+import type { CommitMix, GithubRepo, GithubUser } from "@/lib/types";
+import { aggregateLanguages } from "@/lib/github";
+import LanguageChart from "@/components/LanguageChart";
+import ProfileCard from "@/components/ProfileCard";
+import RepoList from "@/components/RepoList";
 
-export default function Home() {
+
+const Home = () => {
+  const [username, setUsername] = useState("");
+  const [user, setUser] = useState<GithubUser | null>(null);
+  const [repos, setRepos] = useState<GithubRepo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [commitMix, setCommitMix] = useState<CommitMix | null>(null)
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!username.trim()) return;
+    
+    setLoading(true);
+    setError(null);
+    setUser(null);
+
+    try {
+      const res = await fetch(`/api/github?username=${encodeURIComponent(username.trim())}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong");
+        return;
+      }
+
+      setUser(data.user);
+      setRepos(data.repos);
+      setCommitMix(data.commitMix);
+    } catch {
+      setError("Network error — check your connection and try again");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="min-h-screen p-8 max-w-6xl mx-auto">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-2 text-lg font-semibold">
+          <span className="w-8 h-8 rounded-full bg-code items-center justify-center">*</span>
+          Gitpolis
+        </div>
+      </div>
+
+      <h1 className="text-2xl font-semibold mb-1">Enter the github profile</h1>
+      <p className="text-muted mb-4 font-mono text-sm">$ git stats &lt;username&gt;</p>
+
+      <form onSubmit={handleSearch} className="flex gap-2 mb-8">
+        <input
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="e.g. torvalds"
+          className="flex-1 bg-surface border border-border rounded-full px-4 py-2 outline-none focus:border-code"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-6 py-2 rounded-full bg-code text-black font-medium disabled:opacity-50"
+        >
+          {loading ? "Searching..." : "Search"}
+        </button>
+      </form>
+      {!user && !loading && !error && (
+        <div className="text-muted text-sm">
+          Try:{" "}
+          {["torvalds", "gaearon", "addyosmani"].map((name, i) => (
+            <span key={name}>
+              <button
+                onClick={() => setUsername(name)}
+                className="text-code hover:underline"
+              >
+                {name}
+              </button>
+              {i < 2 && ", "}
+            </span>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      )}
+
+      {error && (
+        <div className="bg-surface border border-docs rounded-2xl p-4 text-docs mb-6">
+          {error}
         </div>
-      </main>
-    </div>
+      )}
+
+      {user && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <ProfileCard user={user} />
+          </div>
+
+          <RepoList repos={repos} />
+
+          <div className="bg-surface border border-border rounded-3xl p-6 flex flex-col items-center justify-center">
+            <h2 className="font-semibold mb-4 self-start">Commit Mix</h2>
+            <div className="relative w-40 h-40 rounded-full"
+               style={{
+                       background: commitMix
+                       ? `conic-gradient(#FF6B35 0% ${commitMix.codePercent}%, #2ECC71 ${commitMix.codePercent}% 100%)`
+                       : `conic-gradient(#24262B 0% 100%)`
+                     }}
+            >
+              <div className="absolute inset-4 rounded-full bg-surface flex items-center justify-center text-xl font-semibold">
+                {commitMix ? `${commitMix.codePercent}%` : "—"}
+              </div>
+            </div>
+            <div className="flex gap-4 mt-4 text-sm">
+              <span className="text-code">● Code</span>
+              <span className="text-docs">● Docs</span>
+            </div>
+          </div>
+
+          <div className="md:col-span-2 bg-surface border border-border rounded-3xl p-6">
+            <h2 className="font-semibold mb-4">Languages</h2>
+            <LanguageChart data={aggregateLanguages(repos)} />
+          </div>
+        </div>
+      )}
+    </main>
   );
-}
+};
+
+export default Home;
