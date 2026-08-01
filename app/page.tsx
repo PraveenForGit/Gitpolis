@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { GithubRepo, GithubUser } from "@/lib/types";
+import type { CommitMix, GithubRepo, GithubUser } from "@/lib/types";
 import { aggregateLanguages } from "@/lib/github";
 import LanguageChart from "@/components/LanguageChart";
 import ProfileCard from "@/components/ProfileCard";
@@ -13,11 +13,12 @@ const Home = () => {
   const [repos, setRepos] = useState<GithubRepo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [commitMix, setCommitMix] = useState<CommitMix | null>(null)
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!username.trim()) return;
-
+    
     setLoading(true);
     setError(null);
     setUser(null);
@@ -33,6 +34,7 @@ const Home = () => {
 
       setUser(data.user);
       setRepos(data.repos);
+      setCommitMix(data.commitMix);
     } catch {
       setError("Network error — check your connection and try again");
     } finally {
@@ -84,12 +86,15 @@ const Home = () => {
 
           <div className="bg-surface border border-border rounded-3xl p-6 flex flex-col items-center justify-center">
             <h2 className="font-semibold mb-4 self-start">Commit Mix</h2>
-            <div
-              className="relative w-40 h-40 rounded-full"
-              style={{ background: `conic-gradient(#FF6B35 0% 72%, #2ECC71 72% 100%)` }}
+            <div className="relative w-40 h-40 rounded-full"
+               style={{
+                       background: commitMix
+                       ? `conic-gradient(#FF6B35 0% ${commitMix.codePercent}%, #2ECC71 ${commitMix.codePercent}% 100%)`
+                       : `conic-gradient(#24262B 0% 100%)`
+                     }}
             >
               <div className="absolute inset-4 rounded-full bg-surface flex items-center justify-center text-xl font-semibold">
-                72%
+                {commitMix ? `${commitMix.codePercent}%` : "—"}
               </div>
             </div>
             <div className="flex gap-4 mt-4 text-sm">

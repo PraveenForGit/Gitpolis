@@ -22,3 +22,11 @@ export interface GithubRepo {
     fork: boolean;
     updated_at: string;
 }
+
+export interface CommitMix {
+  codeCommits: number;
+  docsCommits: number;
+  sampled: number;
+  codePercent: number;
+  docsPercent: number;
+}
