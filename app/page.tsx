@@ -1,8 +1,11 @@
 "use client";
 import { useState } from "react";
+import type { GithubRepo, GithubUser } from "@/lib/types";
+import { aggregateLanguages } from "@/lib/github";
+import LanguageChart from "@/components/LanguageChart";
 import ProfileCard from "@/components/ProfileCard";
 import RepoList from "@/components/RepoList";
-import type { GithubRepo, GithubUser } from "@/lib/types";
+
 
 const Home = () => {
   const [username, setUsername] = useState("");
@@ -97,14 +100,7 @@ const Home = () => {
 
           <div className="md:col-span-2 bg-surface border border-border rounded-3xl p-6">
             <h2 className="font-semibold mb-4">Languages</h2>
-            <div className="flex gap-3">
-              {["TypeScript", "Python", "CSS"].map((lang, i) => (
-                <div key={lang} className="flex-1 bg-background rounded-2xl p-4 border border-border">
-                  <div>{lang}</div>
-                  <div>{[6, 3, 2][i]} repos</div>
-                </div>
-              ))}
-            </div>
+            <LanguageChart data={aggregateLanguages(repos)} />
           </div>
         </div>
       )}
