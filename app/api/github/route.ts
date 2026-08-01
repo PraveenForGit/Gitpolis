@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import {fetchUser, fetchTopRepos} from "@/lib/github";
+import { fetchUser, fetchTopRepos, fetchCommitMix } from "@/lib/github";
 
 export async function GET(request: NextRequest) {
     const username = request.nextUrl.searchParams.get("username");
@@ -12,7 +12,18 @@ export async function GET(request: NextRequest) {
             fetchUser(username),
             fetchTopRepos(username)
         ]);
-        return NextResponse.json({ user, repos });
+
+        const topRepo = repos[0];
+        let commitMix = null;
+        if (topRepo) {
+            try {
+                commitMix = await fetchCommitMix(user.login, topRepo.name);
+            } catch {
+                commitMix = null;
+            }
+        }
+
+        return NextResponse.json({ user, repos, commitMix });
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
 
@@ -24,5 +35,4 @@ export async function GET(request: NextRequest) {
         }
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
-
 }
