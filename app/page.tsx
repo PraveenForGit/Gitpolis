@@ -69,6 +69,22 @@ const Home = () => {
           {loading ? "Searching..." : "Search"}
         </button>
       </form>
+      {!user && !loading && !error && (
+        <div className="text-muted text-sm">
+          Try:{" "}
+          {["torvalds", "gaearon", "addyosmani"].map((name, i) => (
+            <span key={name}>
+              <button
+                onClick={() => setUsername(name)}
+                className="text-code hover:underline"
+              >
+                {name}
+              </button>
+              {i < 2 && ", "}
+            </span>
+          ))}
+        </div>
+      )}
 
       {error && (
         <div className="bg-surface border border-docs rounded-2xl p-4 text-docs mb-6">
