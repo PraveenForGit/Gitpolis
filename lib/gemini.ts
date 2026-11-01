@@ -1,12 +1,28 @@
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.1-flash-lite";
+const MAX_PATCH_CHARS = 6000;
+
+export type AiVerdict = { verdict: "spam" | "legit" | "review"; reason: string };
+
 export async function analyzeWithGemini(
   filename: string,
   patch: string
-): Promise<{ verdict: "spam" | "legit" | "review"; reason: string }> {
+): Promise<AiVerdict> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+
+  const trimmedPatch =
+    patch.length > MAX_PATCH_CHARS
+      ? `${patch.slice(0, MAX_PATCH_CHARS)}\n... [diff truncated]`
+      : patch;
+
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
       body: JSON.stringify({
         contents: [
           {
@@ -16,7 +32,7 @@ export async function analyzeWithGemini(
 
 File: ${filename}
 Diff:
-${patch}
+${trimmedPatch}
 
 Judge whether this is a substantive, genuine contribution ("legit") or a trivial/low-effort edit ("spam"). You must pick one of these two options — there is no third option.`,
               },
@@ -38,15 +54,18 @@ Judge whether this is a substantive, genuine contribution ("legit") or a trivial
     }
   );
 
+  if (!res.ok) {
+    throw new Error(`Gemini request failed with status ${res.status}`);
+  }
+
   const data = await res.json();
-  console.log("Gemini API response:", JSON.stringify(data, null, 2));
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
 
   try {
     const parsed = JSON.parse(text);
-    const normalizedVerdict = String(parsed.verdict ?? "").toLowerCase().trim();
-    if (normalizedVerdict === "spam" || normalizedVerdict === "legit") {
-      return { verdict: normalizedVerdict, reason: parsed.reason ?? "No reason given" };
+    const verdict = String(parsed.verdict ?? "").toLowerCase().trim();
+    if (verdict === "spam" || verdict === "legit") {
+      return { verdict, reason: parsed.reason ?? "No reason given" };
     }
     return { verdict: "review", reason: "AI response unclear, flagged for manual review" };
   } catch {
