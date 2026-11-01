@@ -21,8 +21,7 @@ Next.js (App Router) · TypeScript · Tailwind CSS · Recharts · GitHub REST AP
 ```bash
 npm install
 cp .env.example .env.local   # fill your own key
-npm run dev
-Done
+npm run dev  voila done
 ```
 
 Open http://localhost:3000.
